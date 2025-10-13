@@ -1,4 +1,4 @@
-from turbo_utils.database.create_pipeline_tables import create_pipeline_tables
+from database.create_pipeline_tables import create_pipeline_tables
 from datetime import datetime
 from astropy.io import votable
 from logging import Logger
