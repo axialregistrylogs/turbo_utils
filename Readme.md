@@ -1,0 +1,2 @@
+# TURBO utils
+General utility functions/subroutines used by the turbo_telescope package and its submodules. Any code that is used by multiple submodules (e.g. both the control code and the image pipeline) should go here to ensure consistency between versions.
