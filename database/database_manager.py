@@ -132,6 +132,14 @@ class DatabaseManager:
                 next_image = cursor.fetchone()
 
             return next_image
+        
+    def clear_queue(self):
+        """Remove any un-processed images from the 'image_status' table.
+        Returns the list of removed file paths."""
+        with self.connection.cursor() as cursor:
+            cursor.execute(""" DELETE FROM image_status WHERE status = 'processing' RETURNING file_path""")
+            cleared_files = cursor.fetchall()
+            return cleared_files
 
     def start_image(self, image):
         """Record the image as being processed by the pipeline.
