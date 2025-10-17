@@ -137,37 +137,19 @@ class DatabaseManager:
         """Remove any un-processed images from the 'image_status' table.
         Returns the list of removed file paths."""
         with self.connection.cursor() as cursor:
-            cursor.execute(""" DELETE FROM image_status WHERE status = 'processing' RETURNING file_path""")
+            cursor.execute("""DELETE FROM image_status WHERE status = 'processing' RETURNING file_path""")
             cleared_files = cursor.fetchall()
             return cleared_files
 
-    def start_image(self, image):
-        """Record the image as being processed by the pipeline.
-        Checks if an entry has already been created by the telescope."""
-        try:
-            # Is image in database
-            if (image.db_id and
-                (image.object_id == self.get_objectId_from_image_table(image.db_id))):
-                # Has the image been processed before
-                if self.get_step_from_status_table(image.db_id) != "captured":
-                    return False
-                # Update image table
-                with self.connection.cursor() as cursor:
-                    cursor.execute("UPDATE images SET file_path = %s, WHERE image_id = %s;",
-                                    (image.source_path, image.db_id))
-                    self.connection.commit()
+    def start_image(self, image, machine_name, start_time):
+        """Record the image as being processed by the pipeline."""
+        self.add_pipeline_step('START OF PIPELINE', 'START')
 
-                # Update status table
-                self.update_image_status(image, "received", 0, "Yes")
-
-                return True
-
-            # Add image to database for first time
-            self.add_image(image)
-            return True
-        except Exception as e:
-            self.logger.exception(f"Failed to start the image in the pipeline database.\n{type(e).__name__}: {e.args}")
-            raise DatabaseError("Failed to start the image in the pipeline database.") from e
+        with self.connection.cursor() as cursor:
+            cursor.execute("""UPDATE image_status
+                           SET pipeline_step = %s, processing_start = %s, machine_name = %s
+                           WHERE image_id = %s;""",
+                           ('START OF PIPELINE', start_time, machine_name, image.db_id))
 
     def add_exposure(self, filename, object_id, ra, dec, filter):
         """Record that an image has been captured by the camera"""
@@ -202,7 +184,7 @@ class DatabaseManager:
         return
 
 
-    def update_image_status(self, image, pipeline_step, step_shortname, runtime, step_message="No"):
+    def update_image_status(self, image, pipeline_step, step_shortname, end_time, runtime, step_message="NO MESSAGE"):
         """Updates an image's status in the database including which step it's on and
         its total processing time. Updates the image status and the pipeline status tables."""
         try:
@@ -217,9 +199,9 @@ class DatabaseManager:
             with self.connection.cursor() as cursor:
                 # Set the pipeline step & update processing time in the image status table
                 cursor.execute("""UPDATE image_status
-                            SET pipeline_step = %s, processing_time = processing_time + %s, step_message = %s
+                            SET pipeline_step = %s, processing_last = %s, processing_time = processing_time + %s, step_message = %s
                             WHERE image_id = %s;""",
-                            (pipeline_step, runtime, step_message, image.db_id))
+                            (pipeline_step, end_time, runtime, step_message, image.db_id))
 
                 # Update number of images in each step and the total processing time
                 # in the pipeline status table

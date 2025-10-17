@@ -41,9 +41,12 @@ def create_pipeline_tables(database_connection, schema='pipeline'):
     image_id int PRIMARY KEY NOT NULL,
     file_path VARCHAR(255) NOT NULL,
     status VARCHAR (128) NOT NULL,
-    processing_time REAL NOT NULL,
-    pipeline_step VARCHAR(255) NOT NULL,
-    step_message VARCHAR(128),
+    processing_start TIMESTAMP,
+    processing_last TIMESTAMP,
+    processing_time REAL,
+    machine_name VARCHAR(128),
+    pipeline_step VARCHAR(255),
+    step_message VARCHAR(255),
 
     FOREIGN KEY (image_id)
         REFERENCES {schema}.images (image_id) ON DELETE CASCADE,
