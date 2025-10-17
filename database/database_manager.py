@@ -366,7 +366,7 @@ class DatabaseManager:
             self.logger.exception(f"Failed to update nsources in the database.\n{type(e).__name__}: {e.args}")
             raise DatabaseError("Failed to update nsources in the database.") from e
         
-    def log_scamp(self, db_id, scamp_xml, dist_path=None, fgroup_path=None, referr1d_path=None, referr2d_path=None):
+    def log_scamp(self, image, scamp_xml, dist_path=None, fgroup_path=None, referr1d_path=None, referr2d_path=None):
         """Adds contents of a SCAMP output VOTable file to the database"""
         table = votable.parse(scamp_xml)
         date_proc = table.get_field_by_id_or_name('Date').value + ' ' + table.get_field_by_id_or_name('Time').value
@@ -391,7 +391,7 @@ class DatabaseManager:
         try:
             with self.connection.cursor() as cursor:
                 cursor.execute(f"""INSERT INTO scamp_results(image_id, object_id, ra, dec, date_proc, astrom_offset_ref, astrom_sigma_ref, astrom_corr_ref, astrom_chi_ref, dist_map_path, fgroup_map_path, referr_1d_path, referr_2d_path)
-                               VALUES({db_id}, '{obj_id}', {ra}, {dec}, '{date_proc}', '{astrom_offset_ref}', '{astrom_sigma_ref}', {ref_corr}, {ref_chi2}, {dist_path}, {fgroup_path}, {referr1d_path}, {referr2d_path});""")
+                               VALUES({image.db_id}, '{obj_id}', {ra}, {dec}, '{date_proc}', '{astrom_offset_ref}', '{astrom_sigma_ref}', {ref_corr}, {ref_chi2}, {dist_path}, {fgroup_path}, {referr1d_path}, {referr2d_path});""")
                 return True
         except Exception as e:
             self.logger.exception(f"Failed to add scamp results to the database.\n{type(e).__name__}: {e.args}")
