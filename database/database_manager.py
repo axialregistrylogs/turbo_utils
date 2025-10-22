@@ -71,8 +71,8 @@ class DatabaseManager:
             except Exception:
                 filter = "NONE"
 
-            ra = image.ra if image.ra else "NULL"
-            dec = image.dec if image.dec else "NULL"
+            ra = image.ra if image.ra else None
+            dec = image.dec if image.dec else None
 
             # Insert image into images
             with self.connection.cursor() as cursor:
@@ -116,28 +116,35 @@ class DatabaseManager:
     def get_next_image(self):
         """Get the next un-processed image from the 'image_status' table, while setting its status to 'processing'.
         Returns the file path for the image."""
+        self.add_pipeline_step('assigned', 'assigned')
+
         with self.connection.cursor() as cursor:
-            cursor.execute("""UPDATE image_status SET status = 'processing' 
+            cursor.execute("""UPDATE image_status SET status = 'processing', pipeline_step = 'assigned' 
                            WHERE file_path = (
                                 SELECT file_path FROM image_status
                                 WHERE status = 'received'
                                 LIMIT 1
                                 FOR UPDATE SKIP LOCKED
                                 )
-                           RETURNING file_path;""")
+                           RETURNING file_path, image_id;""")
             
-            try:
-                next_image = cursor.fetchone()[0]
-            except TypeError:
-                next_image = cursor.fetchone()
 
-            return next_image
+            next_image = cursor.fetchone()
+
+            if next_image:
+                next_image_path = next_image[0]
+                next_image_id = next_image[1]
+            else:
+                next_image_path = next_image
+                next_image_id = -1
+
+            return next_image_path, next_image_id
         
     def clear_queue(self):
         """Remove any un-processed images from the 'image_status' table.
         Returns the list of removed file paths."""
         with self.connection.cursor() as cursor:
-            cursor.execute("""DELETE FROM image_status WHERE status = 'processing' RETURNING file_path""")
+            cursor.execute("""DELETE FROM image_status WHERE status = 'received' RETURNING file_path""")
             cleared_files = cursor.fetchall()
             return cleared_files
 
