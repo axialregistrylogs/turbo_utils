@@ -115,7 +115,7 @@ class DatabaseManager:
 
     def get_next_image(self):
         """Get the next un-processed image from the 'image_status' table, while setting its status to 'processing'.
-        Returns the file path for the image."""
+        Returns the file path, image_id, and log_path for the image."""
         self.add_pipeline_step('assigned', 'assigned')
 
         with self.connection.cursor() as cursor:
@@ -126,7 +126,7 @@ class DatabaseManager:
                                 LIMIT 1
                                 FOR UPDATE SKIP LOCKED
                                 )
-                           RETURNING file_path, image_id;""")
+                           RETURNING file_path, image_id, log_path;""")
             
 
             next_image = cursor.fetchone()
@@ -134,11 +134,13 @@ class DatabaseManager:
             if next_image:
                 next_image_path = next_image[0]
                 next_image_id = next_image[1]
+                log_path = next_image[2] if len(next_image) > 2 else None
             else:
                 next_image_path = next_image
                 next_image_id = -1
+                log_path = None
 
-            return next_image_path, next_image_id
+            return next_image_path, next_image_id, log_path
         
     def clear_queue(self):
         """Remove any un-processed images from the 'image_status' table.
