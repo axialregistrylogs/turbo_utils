@@ -47,6 +47,7 @@ def create_pipeline_tables(database_connection, schema='pipeline'):
     machine_name VARCHAR(128),
     pipeline_step VARCHAR(255),
     step_message VARCHAR(255),
+    log_path TEXT,
 
     FOREIGN KEY (image_id)
         REFERENCES {schema}.images (image_id) ON DELETE CASCADE,
@@ -66,6 +67,20 @@ def create_pipeline_tables(database_connection, schema='pipeline'):
 
     set_image_status_owner = f"""
     ALTER TABLE {schema}.image_status OWNER TO turbogroup;
+    """
+
+    add_log_path_column = f"""
+    DO $$ 
+    BEGIN 
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_schema = '{schema}' 
+            AND table_name = 'image_status' 
+            AND column_name = 'log_path'
+        ) THEN
+            ALTER TABLE {schema}.image_status ADD COLUMN log_path TEXT;
+        END IF;
+    END $$;
     """
 
     create_time_table = f"""
@@ -185,7 +200,7 @@ def create_pipeline_tables(database_connection, schema='pipeline'):
     table_commands = [create_pipeline_schema,
                       create_image_table, set_image_table_owner,
                       create_pipeline_statistics, set_status_table_owner,
-                      create_status_table, set_image_status_owner,
+                      create_status_table, set_image_status_owner, add_log_path_column,
                       create_time_table, set_time_table_owner,
                       create_flats_table, set_flats_table_owner,
                       create_darks_table, set_darks_table_owner,

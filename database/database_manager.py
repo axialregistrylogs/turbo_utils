@@ -148,15 +148,22 @@ class DatabaseManager:
             cleared_files = cursor.fetchall()
             return cleared_files
 
-    def start_image(self, image, machine_name, start_time):
+    def start_image(self, image, machine_name, start_time, log_path=None):
         """Record the image as being processed by the pipeline."""
         self.add_pipeline_step('START OF PIPELINE', 'START')
 
         with self.connection.cursor() as cursor:
-            cursor.execute("""UPDATE image_status
-                           SET pipeline_step = %s, processing_start = %s, machine_name = %s
-                           WHERE image_id = %s;""",
-                           ('START OF PIPELINE', start_time, machine_name, image.db_id))
+            if log_path is not None:
+                cursor.execute("""UPDATE image_status
+                               SET pipeline_step = %s, processing_start = %s, machine_name = %s, log_path = %s
+                               WHERE image_id = %s;""",
+                               ('START OF PIPELINE', start_time, machine_name, log_path, image.db_id))
+            else:
+                cursor.execute("""UPDATE image_status
+                               SET pipeline_step = %s, processing_start = %s, machine_name = %s
+                               WHERE image_id = %s;""",
+                               ('START OF PIPELINE', start_time, machine_name, image.db_id))
+            self.connection.commit()
             
     def start_image_runtime(self, image, timestamp):
         """ ** For use with runtime.py, to be deprecated **
